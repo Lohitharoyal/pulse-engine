@@ -1,29 +1,32 @@
-import uuid
-from datetime import datetime
-from sqlalchemy import String, JSON, DateTime, ForeignKey, Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column
-from app.database import Base
 import enum
+import uuid
+from datetime import datetime, timezone
 
-class DeliveryStatus(str, enum.Enum):
-    PENDING = "PENDING"
-    SUCCESS = "SUCCESS"
+from sqlalchemy import JSON, DateTime, Enum, String
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database import Base
+
+
+class WebhookStatus(str, enum.Enum):
+    RECEIVED = "RECEIVED"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
-class WebhookRule(Base):
-    __tablename__ = "webhook_rules"
+
+class WebhookEvent(Base):
+    __tablename__ = "webhook_events"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    target_url: Mapped[str] = mapped_column(String, nullable=False)
-    jsonpath_filter: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-class DeliveryLog(Base):
-    __tablename__ = "delivery_logs"
-
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    rule_id: Mapped[str] = mapped_column(String, ForeignKey("webhook_rules.id"))
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
-    status: Mapped[DeliveryStatus] = mapped_column(SQLEnum(DeliveryStatus), default=DeliveryStatus.PENDING)
-    http_status_code: Mapped[int | None] = mapped_column(nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    status: Mapped[WebhookStatus] = mapped_column(
+        Enum(WebhookStatus, native_enum=False),
+        default=WebhookStatus.RECEIVED,
+        nullable=False,
+    )
+    extracted_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
