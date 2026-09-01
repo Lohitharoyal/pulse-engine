@@ -1,29 +1,24 @@
-import uuid
-from datetime import datetime
-from sqlalchemy import String, JSON, DateTime, ForeignKey, Enum as SQLEnum
+from datetime import date, datetime, timezone
+
+from sqlalchemy import Date, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.database import Base
-import enum
 
-class DeliveryStatus(str, enum.Enum):
-    PENDING = "PENDING"
-    SUCCESS = "SUCCESS"
-    FAILED = "FAILED"
 
-class WebhookRule(Base):
-    __tablename__ = "webhook_rules"
+class Skill(Base):
+    __tablename__ = "skills"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    target_url: Mapped[str] = mapped_column(String, nullable=False)
-    jsonpath_filter: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-class DeliveryLog(Base):
-    __tablename__ = "delivery_logs"
-
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    rule_id: Mapped[str] = mapped_column(String, ForeignKey("webhook_rules.id"))
-    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
-    status: Mapped[DeliveryStatus] = mapped_column(SQLEnum(DeliveryStatus), default=DeliveryStatus.PENDING)
-    http_status_code: Mapped[int | None] = mapped_column(nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(80), unique=True, nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
+    current_level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    target_level: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    progress_percentage: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_practiced_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
